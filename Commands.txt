@@ -1,0 +1,16 @@
+dotnet ef migrations add InitialIdentityApplicationDbMigration -c ApplicationDbContext -o Data/Migrations/Identity
+docker run --name my-postgres -p 5432:5432 -e POSTGRES_PASSWORD=secret -d postgres
+dotnet ef migrations add InitialIdentityServerConfigurationDbMigration -c ConfigurationDbContext -o Data/Migrations/IdentitySever/Configuration
+dotnet ef migrations add InitialIdentityServerPersistedGrantDbMigration -c PersistedGrantDbContext -o Data/Migrations/IdentitySever/PersistedGrant
+dotnet ef database update --context ApplicationDbContext
+dotnet ef database update --context ConfigurationDbContext 
+dotnet ef database update --context PersistedGrantDbContext 
+
+
+iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/DuendeSoftware/IdentityServer.Quickstart.UI/main/getmain.ps1'))
+
+install openssl on system
+openssl req -x509 -newkey rsa:4096 -keyout localhost.key -out localhost.crt -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,DNS:api,DNS:identityserver,DNS:singlepageapplication,DNS:webapplication"
+openssl pkcs12 -export -in localhost.crt -inkey localhost.key -out localhost.pfx -name "IdentityServerWithUI"
+
+docker network create -d bridge identserv

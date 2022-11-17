@@ -1,0 +1,66 @@
+version: "3.4"
+
+#networks:
+#    identserv:
+#        driver: bridge
+#        external: true
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: ./API/Dockerfile
+    #networks: 
+    #  - identserv
+    depends_on:
+      - identityserver
+    entrypoint: /bin/sh -c "update-ca-certificates && dotnet API.dll"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=https://+:7001
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=password
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/localhost.pfx
+      - AUTHENTICATION__AUTHORITY=https://identityserver:7000
+      - AUTHENTICATION__AUDIENCE=9fc33c2e-dbc1-4d0a-b212-68b9e07b3ba0
+    ports:
+      - "7001:7001"
+    volumes:
+      - ./localhost.pfx:/https/localhost.pfx:ro
+      - ./localhost.crt:/usr/local/share/ca-certificates/localhost.crt:ro
+  
+  db:
+    environment:
+      - POSTGRES_PASSWORD=secret
+    image: postgres:14
+    ports:
+      - "5432:5432"
+    #networks: 
+    #  - identserv
+    volumes:
+      - db:/var/lib/postgresql/data
+
+  identityserver:
+    build:
+      context: .
+      dockerfile: ./IdentityServer/Dockerfile
+    container_name: identityserver
+    #networks: 
+    #  - identserv
+    depends_on:
+      - db
+    entrypoint: /bin/sh -c "update-ca-certificates && dotnet IdentityServer.dll"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=https://+:7000
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=password
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/localhost.pfx
+      - CONNECTIONSTRINGS__IDENTITY=Server=db;Port=5432;Database=Identity;User Id=postgres;Password=secret;
+      - CONNECTIONSTRINGS__IDENTITYSERVER=Server=db;Port=5432;Database=IdentityServer;User Id=postgres;Password=secret;
+    ports:
+      - "7000:443"
+    volumes:
+      - ./localhost.pfx:/https/localhost.pfx:ro
+      - ./localhost.crt:/usr/local/share/ca-certificates/localhost.crt:ro
+
+volumes:
+  db:

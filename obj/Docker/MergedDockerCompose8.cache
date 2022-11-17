@@ -1,0 +1,96 @@
+services:
+  api:
+    build:
+      context: C:\VantageX\POC\IdentityServerWithUI
+      dockerfile: ./API/Dockerfile
+      labels:
+        com.microsoft.created-by: visual-studio
+        com.microsoft.visual-studio.project-name: API
+      target: base
+    container_name: API
+    depends_on:
+      identityserver:
+        condition: service_started
+    entrypoint: tail -f /dev/null
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_LOGGING__CONSOLE__DISABLECOLORS: "true"
+      ASPNETCORE_URLS: https://+:7001
+      AUTHENTICATION__AUDIENCE: 9fc33c2e-dbc1-4d0a-b212-68b9e07b3ba0
+      AUTHENTICATION__AUTHORITY: https://identityserver:7000
+      DOTNET_USE_POLLING_FILE_WATCHER: '1'
+      NUGET_FALLBACK_PACKAGES: ''
+    image: api:dev
+    labels:
+      com.microsoft.visualstudio.debuggee.arguments: ' --additionalProbingPath /root/.nuget/packages  "/app/bin/Debug/net6.0/API.dll"'
+      com.microsoft.visualstudio.debuggee.killprogram: /bin/sh -c "if PID=$$(pidof
+        dotnet); then kill $$PID; fi"
+      com.microsoft.visualstudio.debuggee.program: dotnet
+      com.microsoft.visualstudio.debuggee.workingdirectory: /app
+    ports:
+    - published: 7001
+      target: 7001
+    tty: true
+    volumes:
+    - C:\VantageX\POC\IdentityServerWithUI\API:/app:rw
+    - C:\Users\PJain\vsdbg\vs2017u5:/remote_debugger:rw
+    - C:\Users\PJain\AppData\Roaming\ASP.NET\Https:/root/.aspnet/https:ro
+    - C:\Users\PJain\AppData\Roaming\Microsoft\UserSecrets:/root/.microsoft/usersecrets:ro
+    - C:\Users\PJain\.nuget\packages:/root/.nuget/packages:ro
+    - C:\VantageX\POC\IdentityServerWithUI:/src:rw
+  db:
+    environment:
+      POSTGRES_PASSWORD: secret
+    image: postgres:14
+    ports:
+    - published: 5432
+      target: 5432
+    volumes:
+    - db:/var/lib/postgresql/data:rw
+  identityserver:
+    build:
+      context: C:\VantageX\POC\IdentityServerWithUI
+      dockerfile: ./IdentityServer/Dockerfile
+      labels:
+        com.microsoft.created-by: visual-studio
+        com.microsoft.visual-studio.project-name: IdentityServer
+      target: base
+    container_name: identityserver
+    depends_on:
+      db:
+        condition: service_started
+    entrypoint: tail -f /dev/null
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_LOGGING__CONSOLE__DISABLECOLORS: "true"
+      ASPNETCORE_URLS: https://+:443;http://+:80
+      CONNECTIONSTRINGS__IDENTITY: Server=db;Port=5432;Database=Identity;User Id=postgres;Password=secret;
+      CONNECTIONSTRINGS__IDENTITYSERVER: Server=db;Port=5432;Database=IdentityServer;User
+        Id=postgres;Password=secret;
+      DOTNET_USE_POLLING_FILE_WATCHER: '1'
+      NUGET_FALLBACK_PACKAGES: ''
+    image: identityserver:dev
+    labels:
+      com.microsoft.visualstudio.debuggee.arguments: ' --additionalProbingPath /root/.nuget/packages  "/app/bin/Debug/net6.0/IdentityServer.dll"'
+      com.microsoft.visualstudio.debuggee.killprogram: /bin/sh -c "if PID=$$(pidof
+        dotnet); then kill $$PID; fi"
+      com.microsoft.visualstudio.debuggee.program: dotnet
+      com.microsoft.visualstudio.debuggee.workingdirectory: /app
+    ports:
+    - target: 80
+    - published: 7000
+      target: 443
+    - target: 443
+    tty: true
+    volumes:
+    - C:\VantageX\POC\IdentityServerWithUI\IdentityServer:/app:rw
+    - C:\VantageX\POC\IdentityServerWithUI\localhost.pfx:/https/localhost.pfx:ro
+    - C:\Users\PJain\vsdbg\vs2017u5:/remote_debugger:rw
+    - C:\Users\PJain\AppData\Roaming\ASP.NET\Https:/root/.aspnet/https:ro
+    - C:\Users\PJain\AppData\Roaming\Microsoft\UserSecrets:/root/.microsoft/usersecrets:ro
+    - C:\Users\PJain\.nuget\packages:/root/.nuget/packages:ro
+    - C:\VantageX\POC\IdentityServerWithUI:/src:rw
+    - C:\VantageX\POC\IdentityServerWithUI\localhost.crt:/usr/local/share/ca-certificates/localhost.crt:ro
+version: '3.4'
+volumes:
+  db: {}
